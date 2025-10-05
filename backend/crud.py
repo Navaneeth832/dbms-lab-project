@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 async def get_user_by_email(email: str):
     row = await user_collection.find_one({"email": email})
     if row:
+        row["_id"] = str(row["_id"])
         return models.UserInDB(**row)
 
 async def create_user(user: schemas.UserCreate, hashed_password: str):
@@ -19,8 +20,13 @@ async def create_user(user: schemas.UserCreate, hashed_password: str):
 async def create_task(task: schemas.TaskCreate, owner_id: str):
     task_dict = task.dict()
     task_dict["owner_id"] = owner_id
-    await task_collection.insert_one(task_dict)
-    return schemas.TaskInDB(**task_dict)
+    task_dict["created_at"] = datetime.utcnow()
+    task_dict["updated_at"] = datetime.utcnow()
+    result = await task_collection.insert_one(task_dict)
+    new_task = await task_collection.find_one({"_id": result.inserted_id})
+    if new_task:
+        new_task['id'] = str(new_task.pop('_id'))
+        return schemas.TaskInDB(**new_task)
 
 async def get_tasks(owner_id: str, filters: dict):
     query = {"owner_id": owner_id}
@@ -29,16 +35,22 @@ async def get_tasks(owner_id: str, filters: dict):
     if filters.get("assignee_id"):
         query["assignee_id"] = filters["assignee_id"]
 
-    sort_field = filters.get("sort", "created_at")
+    sort_field = filters.get("sort")
+    if not sort_field:
+        sort_field = "created_at"
+
+    cursor = task_collection.find(query).sort(sort_field)
 
     tasks = []
-    async for task in task_collection.find(query).sort(sort_field):
+    async for task in cursor:
+        task['id'] = str(task.pop('_id'))
         tasks.append(schemas.TaskInDB(**task))
     return tasks
 
 async def get_task(id: str, owner_id: str):
     task = await task_collection.find_one({"_id": ObjectId(id), "owner_id": owner_id})
     if task:
+        task['id'] = str(task.pop('_id'))
         return schemas.TaskInDB(**task)
 
 async def update_task(id: str, task: schemas.TaskUpdate, owner_id: str):
@@ -78,9 +90,11 @@ async def get_dashboard_overview(owner_id: str):
         "owner_id": owner_id,
         "due_date": {"$gte": datetime.utcnow(), "$lte": datetime.utcnow() + timedelta(days=7)}
     }).limit(5):
+        task['id'] = str(task.pop('_id'))
         upcoming_deadlines.append(schemas.TaskInDB(**task))
 
-    return {
+    response_data = {
         "task_counts": task_counts,
         "upcoming_deadlines": upcoming_deadlines,
     }
+    return schemas.DashboardOverview(**response_data)

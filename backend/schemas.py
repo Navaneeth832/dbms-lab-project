@@ -1,6 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional, List
 from datetime import datetime
+
+def to_camel(string: str) -> str:
+    words = string.split('_')
+    return words[0] + ''.join(word.capitalize() for word in words[1:])
 
 class UserCreate(BaseModel):
     name: str
@@ -54,3 +58,7 @@ class TaskAssignment(BaseModel):
 class DashboardOverview(BaseModel):
     task_counts: dict
     upcoming_deadlines: list
+
+    class Config:
+        alias_generator = to_camel
+        populate_by_name = True
