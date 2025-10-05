@@ -1,26 +1,26 @@
-import os
+from fastapi import FastAPI
+from routes import users, tasks, dashboard
+from fastapi.middleware.cors import CORSMiddleware
 
-# Define the file and folder structure
-files = [
-    "database.py",
-    "models.py",
-    "schemas.py",
-    "auth.py",
-    "crud.py"
+app = FastAPI()
+
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
 ]
-routes_folder = "routes"
-routes_files = [
-    "routes/tasks.py",
-    "routes/users.py"
-]
-for file in files:
-    with open(file, 'w') as f:
-        f.write("")  # Create an empty file
 
-# Create the routes folder and its files
-os.makedirs(routes_folder, exist_ok=True)
-for file in routes_files:
-    with open(file, 'w') as f:
-        f.write("")  # Create an empty file
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-print("Files and folders created successfully!")
+app.include_router(users.router, tags=["users"])
+app.include_router(tasks.router, tags=["tasks"])
+app.include_router(dashboard.router, tags=["dashboard"])
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
