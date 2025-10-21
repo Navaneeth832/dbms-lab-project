@@ -177,6 +177,6 @@ Contributions are always welcome!
 
 ## 👨‍💻 Author
 
-**Made with ❤️ by [Navaneeth (Mitu)](https://github.com/navaneeth832)**
+**Made with ❤️ by [Navaneeth](https://github.com/navaneeth832)**
 
 ---
